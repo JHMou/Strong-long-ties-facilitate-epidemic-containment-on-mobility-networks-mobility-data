@@ -4,7 +4,6 @@ import pickle
 import numpy as np
 from sklearn.metrics import r2_score
 def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r,v,D):
-    #记录每日新增
     S_i = []
     E_i = []
     I_i = []
@@ -26,13 +25,11 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r,v,D):
             I_i1 = Grid_SEIR.loc[i][2]
             R_i1 = Grid_SEIR.loc[i][3]
             N_i1 = Grid_SEIR.loc[i][4]
-
             dS_dt1 =  (1 - D) * (S_i1 - c * S_i1 * I_i1 / N_i1-v*S_i1 )
             dE_dt1 =  (1 - D) * (c * S_i1 * I_i1 / N_i1 + (1 - elong) * E_i1)
             dI_dt1 = (1 - D) * (elong * E_i1 + (1 - r) * I_i1)
             dR_dt1 =  (1 - D) * (r * I_i1 + R_i1+v*S_i1)
             deta_I1=elong * E_i1
-
             S_j1 = np.array(Grid_SEIR.S)
             E_j1 = np.array(Grid_SEIR.E)
             I_j1 = np.array(Grid_SEIR.I)
@@ -49,7 +46,6 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r,v,D):
             R_j = np.array(MID.R)
             N_j = S_j + E_j + I_j + R_j
             p_j_i = np.array(MID.P)
-
             S_list = p_j_i * (S_j - c * S_j * I_j / N_j-v*S_j)
             dS_dt2 = D * sum(S_list)-S_i1
             E_list = p_j_i * ((1 - elong) * E_j + c * S_j * I_j / N_j)
@@ -58,23 +54,18 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r,v,D):
             dI_dt2 = D * sum(I_list)-I_i1
             R_list = p_j_i * (r * I_j + R_j+v*S_j)
             dR_dt2 = D * sum(R_list)-R_i1
-
             S_i.append(S_i1 + dS_dt1 + dS_dt2)
             E_i.append(E_i1 + dE_dt1 + dE_dt2)
             I_i.append(I_i1 + dI_dt1 + dI_dt2)
             R_i.append(R_i1 + dR_dt1 + dR_dt2)
             deta_I.append(deta_I1)
-
     Grid_SEIR['S'] = S_i
     Grid_SEIR['E'] = E_i
     Grid_SEIR['I'] = I_i
     Grid_SEIR['R'] = R_i
     Grid_SEIR['deta_I'] = deta_I
     Grid_SEIR['N'] = list(np.array(S_i) + np.array(E_i) + np.array(I_i) + np.array(R_i))
-
     return Grid_SEIR
-
-
 
 def simulation(Grid_SEIR,v_after,D_after):
     c = 3.4/5.6
@@ -106,7 +97,6 @@ def simulation(Grid_SEIR,v_after,D_after):
                 D = D_after
                 v = v_after
             Grid_SEIR_T = SEIR_Reaction_Diffusion(Grid_SEIR_T, P, c, elong, r, v,D)
-
             I.append(sum(Grid_SEIR_T.I))
             D_I.append(sum(Grid_SEIR_T.deta_I))
             Grid_SEIR_T1=Grid_SEIR_T[Grid_SEIR_T.I != 0]
@@ -114,7 +104,6 @@ def simulation(Grid_SEIR,v_after,D_after):
             print(str(icount) + 'epoch:' + str(I[-1]))
             print('grid:'+str(grid_num[-1]))
             icount += 1
-
 
         file = open(f'./result/I_{v_after}_{D_after}.pickle', 'wb')
         pickle.dump(I, file)
