@@ -10,7 +10,6 @@ import random
 from collections import Counter
 
 def fast_od_matrix(flow_data,grid):
-    #给网络重新标号
     G1 = nx.DiGraph()
     node_list1 = list(flow_data.source)
     node_list1.extend(list(flow_data.target))
@@ -19,23 +18,19 @@ def fast_od_matrix(flow_data,grid):
     my_dict = {}
     for index, item in enumerate(node_list):
         my_dict[item] = index
-    EDGE = {'grid_id': node_list, 'id': list(range(len(node_list)))}  ####id编号从0开始
+    EDGE = {'grid_id': node_list, 'id': list(range(len(node_list)))}
     edge_rank = pd.DataFrame(EDGE)
-    # 拼接
     edge_rank.rename(columns={'grid_id': 'source'}, inplace=True)
     flow_data1 = pd.merge(flow_data, edge_rank, how='inner', on='source')
     flow_data1.rename(columns={'id': 'source_id'}, inplace=True)
     edge_rank.rename(columns={'source': 'target'}, inplace=True)
     flow_data2 = pd.merge(flow_data1, edge_rank, how='inner', on='target')
     flow_data2.rename(columns={'id': 'target_id'}, inplace=True)
-
     G1.add_nodes_from(list(range(len(node_list))))
     edgelist = flow_data2[['source_id', 'target_id', 'weight']].values.tolist()
     G1.add_weighted_edges_from(edgelist)
     A = nx.to_numpy_matrix(G1, weight='weight')
     return A
-
-
 
 def roulette(select_list):
     sum_val = 1
@@ -48,9 +43,7 @@ def roulette(select_list):
         else:
             continue
 
-
 def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r):
-    #agent-based
     S_i = []
     E_i = []
     R_i = []
@@ -79,14 +72,12 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r):
             Grid_SEIR.iloc[i,2] = dE_dt1
             Grid_SEIR.iloc[i,4] = dR_dt1
             deta_I.append(deta_I1)
-
             rand_I=dI_dt1-int(dI_dt1)
             random_val = random.random()
             if rand_I>=random_val:
                 Grid_SEIR.iloc[i, 3] = int(dI_dt1)+1
             else:
                 Grid_SEIR.iloc[i, 3] = int(dI_dt1)
-
     Grid_SEIR2=Grid_SEIR.copy()
     Grid_SEIR2['S']=0
     Grid_SEIR2['E'] = 0
@@ -110,12 +101,10 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r):
     Grid_SEIR2['S'] = S_i
     Grid_SEIR2['E'] = E_i
     Grid_SEIR2['R'] = R_i
-    #讨论I的仿真移动
     for i in range(Grid_SEIR.shape[0]):
         if Grid_SEIR.loc[i][5] == 0:
             Grid_SEIR2.iloc[i, 3] = 0
         else:
-
             p_j_i1 = P1[i, :]  
             index_list=[]
             if sum(p_j_i1)!=0:
@@ -133,8 +122,6 @@ def SEIR_Reaction_Diffusion(Grid_SEIR, P, c, elong, r):
     Grid_SEIR2['N'] = np.array(Grid_SEIR2['S']) + np.array(Grid_SEIR2['E']) + np.array(Grid_SEIR2['I']) + np.array(Grid_SEIR2['R'])
     Grid_SEIR2['deta_I'] = deta_I
     return Grid_SEIR2
-
-
 
 def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
     file = open(f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/Real_control_{tage}.pickle', 'rb')
@@ -170,7 +157,7 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
     grid_involved_num=[]
     grid_total_num = []
     while tqdm(icount < 90):
-        if icount<=23:
+        if icount<=26:
             Grid_SEIR_T = SEIR_Reaction_Diffusion(Grid_SEIR_T, P_long, c, elong, r) 
             Grid_control = Grid_SEIR_T.copy() 
             edges_distance_num.append(0)
@@ -225,15 +212,12 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
                             ini_target.rename(columns={'target': 'id'}, inplace=True)
                             ini_target.sort_values(by=['rank'], ascending=True, inplace=True, ignore_index=True)
                             grid2 = ini_target.reset_index(drop=True)
-
                             for j in list(grid2['id']):
                                 if flag_list[grid_index.index(j)] == 0: 
                                     itarget.append(j)
-
                             if len(itarget) == 0:
                                 control_dict[source1] = []
                                 continue
-
                             if (0 < len(itarget)) & (len(itarget) < num_delet):
                                 mid_itarget = itarget
                                 grid_weight_list.extend(mid_itarget)
@@ -243,26 +227,19 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
                                 grid_weight_list.extend(mid_itarget)
                                 control_dict[source1] = mid_itarget
                             itarget_all.extend(mid_itarget)
-
                     for j in list(set(itarget_all)):  
                         flag_list[grid_index.index(j)] = 1
-
-                    # 保存control_dict
                     file = open(  f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/Control_dict_{tage}_{icount}.pickle',  'wb')
                     pickle.dump(control_dict, file)
                     file.close()
-                    # 保存每个时刻的grid感染情况
                     file = open( f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/Grid_SEIR_T_{tage}_{icount}.pickle',  'wb')
                     pickle.dump(Grid_SEIR_T, file)
                     file.close()
                     grid_total_num.append(len(list(set(itarget_all))))
-
                     grid_weight_list1 = list(set(grid_weight_list))
                     grid_list1 = list(Grid_SEIR_T[Grid_SEIR_T.flag != 0]['id'])  
                     grid_weight_list2 = list(set(grid_weight_list1).difference(set(grid_list1)))
-
                     source_isolation=list(grid_weight_list2)
-                    # 排除自环
                     edge_grid1=edge1[edge1.source.isin(source_isolation) | edge1.target.isin(source_isolation)]
                     edge_grid2= edge1[edge1.source.isin(source_isolation) & edge1.target.isin(source_isolation)]
                     edge_grid = pd.concat([edge_grid1, edge_grid2], ignore_index=True, verify_integrity=True, sort=True)
@@ -270,14 +247,12 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
                     Grid_SEIR_T.loc[(Grid_SEIR_T.id.isin(source_isolation)), 'V'] = v_after
                     Grid_SEIR_T.loc[(Grid_SEIR_T.id.isin(source_isolation)), 'flag']=-1
                     control_edges=pd.concat([control_edges, edge_grid], ignore_index=True, verify_integrity=True, sort=True)
-
                 control_edges.drop_duplicates(subset=['source', 'target'], keep=False, inplace=True)
                 weight_total.append(sum(control_edges.weight) + sum(edge_grid2.weight))
                 control_edges_num = control_edges[control_edges.weight != 0]
                 edges_distance_num.append(control_edges_num.shape[0])
                 grid_ini_patient_num.append(grid_isolation.shape[0])
                 grid_involved_num.append(edge_num_distance)
-
                 control_edges1 = control_edges.groupby(['source'])['weight'].sum().reset_index()
                 source_weight = set(list(control_edges1.source))  
                 self_edges0 = edge1[(edge1.source.isin(source_weight)) & (edge1.target.isin(source_weight)) & ( edge1.source == edge1.target)]
@@ -291,27 +266,21 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
                 edge1.drop_duplicates(subset=['source', 'target'], keep='last', inplace=True)
                 edge1 = pd.concat([edge1, control_edges], ignore_index=True, verify_integrity=True, sort=True)
                 edge1.drop_duplicates(subset=['source', 'target'], keep='last', inplace=True)
-
                 edges_weight1 = edge1.reset_index(drop=True)
                 edges_weight = edges_weight1[['source', 'target', 'weight', 'distance']]
                 A = fast_od_matrix(edges_weight, grid_list_new)
                 P_long = normalize(np.asarray(A), axis=1, norm='l1')
-
                 source2 = list(grid_isolation.id)
                 Grid_SEIR_T.loc[(Grid_SEIR_T.id.isin(source2)), 'V'] = v_after
                 Grid_SEIR_T = SEIR_Reaction_Diffusion(Grid_SEIR_T, P_long, c, elong, r)  
-                Grid_control = Grid_SEIR_T.copy()  
-
-
+                Grid_control = Grid_SEIR_T.copy()
             I.append(sum(Grid_SEIR_T.I))
             D_I.append(sum(Grid_SEIR_T.deta_I))
             print(str(icount) + 'epoch:' + str(D_I[-1]))
             icount += 1
-
     file = open(f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/I_weight_{tage}.pickle', 'wb')
     pickle.dump(I, file)
     file.close()
-
     file = open(f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/DETA_I_weight_{tage}.pickle', 'wb')
     pickle.dump(D_I, file)
     file.close()
@@ -320,22 +289,19 @@ def simulation_weight(Grid_SEIR,P_long,tage,edge1,long_tie):
     file.close()
     f=f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/Grid_SEIR_T_weight_{tage}.csv'
     Grid_SEIR_T.to_csv(f, index=False, header=True)
-
     EDGE = {'Grid_Cost_initial': grid_ini_patient_num,'Grid_Cost_involved':grid_involved_num,'Grid_Cost_total':grid_total_num, 'Edges_Cost': edges_distance_num,'Weight_Cost':weight_total}
     data_edge = pd.DataFrame(EDGE)
     file_name = f'/data3/lvxin/moujianhong/shanghai_data/data_20240306/control_process_t_23/strong_tie/Cost_weight_{tage}.csv'
     data_edge.to_csv(file_name, index=False, header=True)
 
 
-
 if __name__=='__main__':
-
     file = open('/data3/lvxin/moujianhong/shanghai_data/data/patient1.pickle', 'rb')
     patient0 = pickle.load(file)
     file.close()
     edges0 = patient0[0] 
     weight_threshold=28
-    long_tie = pd.read_csv(f'/data3/lvxin/moujianhong/shanghai_data/data/stage1.csv')
+    long_tie = pd.read_csv(f'./strong long ties/strong_long_ties_stage1.csv')
     long_tie1 = long_tie[long_tie.weight > weight_threshold]
     long_tie = long_tie1.copy()
     grid_list_new1 = list(long_tie['source'])
@@ -348,52 +314,35 @@ if __name__=='__main__':
     edges_distance=edges_new.copy()
     edges_weight=edges_new.copy()
     edges_long=edges_new.copy()
-
     edges_new.rename(columns={'grid_id': 'source'}, inplace=True)
     edges_new1 = edges_new[['source', 'target', 'weight', 'distance']]
     A = fast_od_matrix(edges_new1, grid_list_new)
     P_before = normalize(np.asarray(A), axis=1, norm='l1')
-    case_data1 = pd.read_csv(f'/data3/lvxin/moujianhong/shanghai_data/data/case_data.csv')
-    grid_rect = pd.read_csv(r'/data3/lvxin/moujianhong/shanghai_data/data/shanghai_grid.csv')
-    case_data = case_data1.dropna(axis=0, subset=["location_bd09ll"])  
-    case_data['time'] = pd.to_datetime(case_data.date)
-    case_data.sort_values(by=['time'], ascending=True, inplace=True)
-    case_data['long'] = case_data['location_bd09ll'].apply(lambda x: float(x.split(',')[0]))
-    case_data['lat'] = case_data['location_bd09ll'].apply(lambda x: float(x.split(',')[1]))
-    start_time = '2022-03-01'
-    end_time = '2022-03-05'
-    case_data2 = case_data[(case_data.time >= pd.to_datetime(start_time)) & (case_data.time <= pd.to_datetime(end_time))]
-    for igrid in range(grid_rect.shape[0]):
-        num = case_data2[ (case_data2.long >= grid_rect.iloc[igrid, 1]) & (case_data2.lat >= grid_rect.iloc[igrid, 2]) & (case_data2.long < grid_rect.iloc[igrid, 5]) & (case_data2.lat < grid_rect.iloc[igrid, 6])].count()
-        grid_rect.loc[igrid, 'patient'] = num[0]
-
-
-    resident_grid1 = pd.read_csv(r'/data3/lvxin/moujianhong/shanghai_data/data/shanghai_od_202203_home2.csv')
+    grid_rect = pd.read_csv('input_of_control.csv')
+    resident_grid1 = pd.read_csv(r'./shanghai_od_202203_home2.csv')
     resident_grid = resident_grid1.groupby(['grid'])['usum'].sum().reset_index()  
     grid_id = list(grid_rect.grid_id)
     for igrid in grid_id:
         mid = resident_grid[resident_grid.grid == igrid]
         if mid.shape[0] == 0:
             resident_grid = resident_grid.append({'grid': igrid, 'usum': 1}, ignore_index=True)
-
     resident_grid.sort_values(by=['grid'], ascending=True, inplace=True)
     resident_grid1 = resident_grid.reset_index(drop=True)
     resident_grid = resident_grid1.copy()
-    file = open(f'/data3/lvxin/moujianhong/shanghai_data/data/Resident.pickle', 'wb')
+    file = open(f'Resident.pickle', 'wb')
     pickle.dump(resident_grid, file)
     file.close()
     c = 3.4/5.6
     I = np.array(grid_rect.patient)
     E = np.array([0] * len(grid_rect.patient))
     R = np.array([0] * len(grid_rect.patient)) 
-    file = open('/data3/lvxin/moujianhong/shanghai_data/data/Resident.pickle', 'rb')
+    file = open('Resident.pickle', 'rb')
     resid_data_grid = pickle.load(file)
     file.close()
     N = np.array(resid_data_grid.usum)
     S = N - E - R - I
     D = [1] * len(grid_rect.patient)
     V = [0] * len(grid_rect.patient)
-
     bool_I_N = np.where(I > N)
     N[bool_I_N] = I[bool_I_N]
     E = c * S * I / N 
@@ -401,12 +350,9 @@ if __name__=='__main__':
     Grid_SEIR1 = {'id': grid_id, 'S': list(S), 'E': list(E), 'I': list(I), 'R': list(R), 'N': list(N), 'D': D, 'V': V}
     Grid_SEIR = pd.DataFrame(Grid_SEIR1)
     Grid_SEIR1 = Grid_SEIR[Grid_SEIR.id.isin(grid_list_new)]
-
-    #控制措施从0305开始
     resident_grid.rename(columns={'grid': 'id'}, inplace=True)
-    Grid_SEIR_long=pd.merge(Grid_SEIR1,resident_grid,on=['id'],how='inner')#
+    Grid_SEIR_long=pd.merge(Grid_SEIR1,resident_grid,on=['id'],how='inner')
     Grid_SEIR_long['flag']=0
-
     Grid_SEIR_distance=Grid_SEIR_long.copy()
     Grid_SEIR_weight=Grid_SEIR_long.copy()
     print('initial:'+str(sum(Grid_SEIR_long.I)))
